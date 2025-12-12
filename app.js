@@ -3,6 +3,10 @@ const axios = require("axios");
 const supabase = require("../supabase");
 const router = express.Router();
 
+router.get("/", async (req, res) => {
+    return res.status(200).send("Error exchanging token");
+});
+
 router.get("/auth/instagram/callback", async (req, res) => {
   const code = req.query.code;
 
