@@ -6,6 +6,10 @@ app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+app.get('/', (req, res) => {
+  res.send('hello sj');
+});
+
 // Verification for Meta Developer Portal
 app.get('/api/webhook', (req, res) => {
   const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
@@ -38,3 +42,4 @@ app.post('/api/webhook', async (req, res) => {
 });
 
 module.exports = app;
+
