@@ -49,9 +49,14 @@ app.get('/auth/callback', async (req, res) => {
   }
 
   try {
-    // Exchange code for access token
-    const response = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?client_id=${process.env.APP_ID}&client_secret=${process.env.APP_SECRET}&redirect_uri=${process.env.REDIRECT_URI}&code=${code}`);
+    const appId = (process.env.APP_ID || '').trim();
+    const appSecret = (process.env.APP_SECRET || '').trim();
+    const redirectUri = (process.env.REDIRECT_URI || '').trim();
 
+    // Exchange code for access token
+    const url = `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${encodeURIComponent(code)}`;
+    
+    const response = await fetch(url);
     const data = await response.json();
 
     if (!response.ok) {
