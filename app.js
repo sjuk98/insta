@@ -33,6 +33,28 @@ app.get('/api/webhook', (req, res) => {
   res.send('Error, wrong validation token');
 });
 
+app.get('/auth/callback', async (req, res) => {
+  const code = req.query.code;
+
+  if (!code) {
+    return res.status(400).send('No code received');
+  }
+
+  try {
+    // Exchange code for access token
+    const response = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?client_id=${process.env.APP_ID}&client_secret=${process.env.APP_SECRET}&redirect_uri=${process.env.REDIRECT_URI}&code=${code}`);
+
+    const data = await response.json();
+
+    console.log('Access Token:', data);
+
+    res.send('Login success');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error getting token');
+  }
+});
+
 // Handling the Mention
 app.post('/api/webhook', async (req, res) => {
   const body = req.body;
