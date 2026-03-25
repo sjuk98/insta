@@ -26,6 +26,50 @@ app.get('/', (req, res) => {
   res.send('hello sj');
 });
 
+// Privacy Policy page required by Meta
+app.get('/privacy', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>Privacy Policy - Insta Tracker</title>
+        <style>
+          body { font-family: sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: auto; }
+          h1 { color: #333; }
+        </style>
+      </head>
+      <body>
+        <h1>Privacy Policy</h1>
+        <p>Last Updated: March 2024</p>
+        <p>This Privacy Policy describes how we collect, use, and handle your information when you use our Instagram Tracker service.</p>
+        
+        <h2>Information We Collect</h2>
+        <p>When you authorize our app via Instagram, we may collect the following information:</p>
+        <ul>
+          <li>Instagram User ID and Username</li>
+          <li>Media IDs of posts or stories where you mention our connected accounts</li>
+          <li>Basic profile information provided by the Instagram Basic Display API</li>
+        </ul>
+
+        <h2>How We Use Your Information</h2>
+        <p>We use the collected information solely to:</p>
+        <ul>
+          <li>Track and display mentions in our dashboard</li>
+          <li>Provide insights into story engagement</li>
+        </ul>
+
+        <h2>Data Security and Retrieval</h2>
+        <p>We do not sell your data to third parties. We use Supabase to securely store the mentioned data.</p>
+
+        <h2>Data Deletion</h2>
+        <p>If you wish to delete your data from our system, please contact us at <strong>[Your Contact Email]</strong> or disconnect our app from your Instagram settings.</p>
+
+        <h2>Contact Us</h2>
+        <p>If you have any questions about this Privacy Policy, please contact us.</p>
+      </body>
+    </html>
+  `);
+});
+
 // Verification for Meta Developer Portal
 app.get('/api/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
