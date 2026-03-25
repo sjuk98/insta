@@ -76,12 +76,12 @@ app.get('/api/webhook', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+  if (mode === 'subscribe' && (token || '').trim() === (VERIFY_TOKEN || '').trim()) {
     console.log('Webhook verified');
     return res.status(200).send(challenge);
   }
   
-  console.error('Webhook verification failed: token mismatch');
+  console.error(`Webhook verification failed. Expected: ${(VERIFY_TOKEN || '').trim()}, Received: ${(token || '').trim()}`);
   res.status(403).send('Forbidden');
 });
 
