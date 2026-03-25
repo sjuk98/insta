@@ -53,9 +53,19 @@ app.get('/auth/callback', async (req, res) => {
     const appSecret = (process.env.APP_SECRET || '').trim();
     const redirectUri = (process.env.REDIRECT_URI || '').trim();
 
+    if (!appId || !appSecret || !redirectUri) {
+      console.error('Missing Meta App configuration:', { 
+        hasAppId: !!appId, 
+        hasAppSecret: !!appSecret, 
+        hasRedirectUri: !!redirectUri 
+      });
+      return res.status(500).send(`Configuration Error: Please ensure APP_ID, APP_SECRET, and REDIRECT_URI are set in Vercel settings.`);
+    }
+
     // Exchange code for access token
-    const url = `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${encodeURIComponent(code)}`;
+    const url = `https://graph.facebook.com/v18.0/oauth/access_token?client_id=815875474588666&client_secret=${encodeURIComponent(appSecret)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${encodeURIComponent(code)}`;
     
+    console.log('Exchanging code for token...');
     const response = await fetch(url);
     const data = await response.json();
 
