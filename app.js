@@ -118,11 +118,26 @@ app.get('/auth/callback', async (req, res) => {
       return res.status(400).send(`Error getting token: ${data.error?.message || 'Unknown error'}`);
     }
 
-    console.log('Access Token:', data);
-    res.send('Login success');
+    console.log('Access Token obtained:', data.access_token);
+    
+    // Now fetch the Instagram Business Account ID connected to the user's accounts
+    const accountsUrl = `https://graph.facebook.com/v11.0/me/accounts?fields=instagram_business_account&access_token=${data.access_token}`;
+    const accountsResponse = await fetch(accountsUrl);
+    const accountsData = await accountsResponse.json();
+    
+    // Find the first page that has a connected Instagram account
+    const igAccount = accountsData.data?.find(page => page.instagram_business_account)?.instagram_business_account;
+    
+    if (igAccount) {
+      console.log('Found Instagram Business Account ID:', igAccount.id);
+      res.send(`Login success! Found Instagram Business Account: ${igAccount.id}. You can now use this ID to track stories.`);
+    } else {
+      console.warn('No connected Instagram Business Account found on the pages.');
+      res.send('Login success, but no Instagram Business Account was found connected to your Facebook Pages. Ensure your Instagram account is a Professional account and linked to a Facebook Page.');
+    }
   } catch (err) {
     console.error('Auth callback error:', err);
-    res.status(500).send('Error getting token');
+    res.status(500).send('Error during authentication process.');
   }
 });
 
