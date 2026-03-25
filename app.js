@@ -26,11 +26,17 @@ app.get('/', (req, res) => {
 
 // Verification for Meta Developer Portal
 app.get('/api/webhook', (req, res) => {
-  const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-  if (req.query['hub.verify_token'] === VERIFY_TOKEN) {
-    return res.send(req.query['hub.challenge']);
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+    console.log('Webhook verified');
+    return res.status(200).send(challenge);
   }
-  res.send('Error, wrong validation token');
+  
+  console.error('Webhook verification failed: token mismatch');
+  res.status(403).send('Forbidden');
 });
 
 app.get('/auth/callback', async (req, res) => {
@@ -46,11 +52,15 @@ app.get('/auth/callback', async (req, res) => {
 
     const data = await response.json();
 
-    console.log('Access Token:', data);
+    if (!response.ok) {
+      console.error('Token exchange error:', data);
+      return res.status(400).send(`Error getting token: ${data.error?.message || 'Unknown error'}`);
+    }
 
+    console.log('Access Token:', data);
     res.send('Login success');
   } catch (err) {
-    console.error(err);
+    console.error('Auth callback error:', err);
     res.status(500).send('Error getting token');
   }
 });
@@ -60,19 +70,34 @@ app.post('/api/webhook', async (req, res) => {
   const body = req.body;
 
   if (body.object === 'instagram') {
-    for (const entry of body.entry) {
-      const mention = entry.changes?.[0]?.value;
-      
-      if (mention) {
-        // Save share details to Supabase
-        await supabase.from('shares').insert([{
-          instagram_user_id: mention.user_id,
-          media_id: mention.media_id,
-          username: mention.username || 'unknown'
-        }]);
+    try {
+      for (const entry of body.entry) {
+        if (!entry.changes) continue;
+        
+        for (const change of entry.changes) {
+          if (change.field === 'mentions') {
+            const mention = change.value;
+            
+            // Save share details to Supabase
+            const { error } = await supabase.from('shares').insert([{
+              instagram_user_id: mention.user_id || entry.id,
+              media_id: mention.media_id,
+              username: mention.username || 'unknown'
+            }]);
+
+            if (error) {
+              console.error('Error inserting into Supabase:', error);
+            } else {
+              console.log('Mention saved to Supabase');
+            }
+          }
+        }
       }
+      return res.status(200).send('OK');
+    } catch (err) {
+      console.error('Error processing webhook:', err);
+      return res.status(500).send('Error');
     }
-    return res.status(200).send('OK');
   }
   res.sendStatus(404);
 });
