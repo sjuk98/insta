@@ -23,7 +23,7 @@ const supabase = (SUPABASE_URL && SUPABASE_SERVICE_KEY)
   : null;
 
 app.get('/', (req, res) => {
-  res.send('hello sj');
+  res.send('hello');
 });
 
 // Privacy Policy page required by Meta
