@@ -10,15 +10,17 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment. See .env.example');
-  process.exit(1);
+  console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY in environment.');
+  // Do not process.exit(1) on Vercel as it crashes the function
 }
 
 if (!VERIFY_TOKEN) {
-  console.warn('Warning: VERIFY_TOKEN is not set. Webhook verification will fail until it is provided.');
+  console.warn('Warning: VERIFY_TOKEN is not set. Webhook verification will fail.');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+const supabase = (SUPABASE_URL && SUPABASE_SERVICE_KEY) 
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY) 
+  : null;
 
 app.get('/', (req, res) => {
   res.send('hello sj');
@@ -78,17 +80,21 @@ app.post('/api/webhook', async (req, res) => {
           if (change.field === 'mentions') {
             const mention = change.value;
             
-            // Save share details to Supabase
-            const { error } = await supabase.from('shares').insert([{
-              instagram_user_id: mention.user_id || entry.id,
-              media_id: mention.media_id,
-              username: mention.username || 'unknown'
-            }]);
+            // Save share details to Supabase if client is initialized
+            if (supabase) {
+              const { error } = await supabase.from('shares').insert([{
+                instagram_user_id: mention.user_id || entry.id,
+                media_id: mention.media_id,
+                username: mention.username || 'unknown'
+              }]);
 
-            if (error) {
-              console.error('Error inserting into Supabase:', error);
+              if (error) {
+                console.error('Error inserting into Supabase:', error);
+              } else {
+                console.log('Mention saved to Supabase');
+              }
             } else {
-              console.log('Mention saved to Supabase');
+              console.warn('Supabase not initialized, skipping insertion');
             }
           }
         }
