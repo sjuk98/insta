@@ -107,9 +107,9 @@ app.get('/auth/callback', async (req, res) => {
     }
 
     // Exchange code for access token
-    const url = `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${encodeURIComponent(code)}`;
+    const url = `https://graph.facebook.com/v11.0/oauth/access_token?client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${encodeURIComponent(code)}`;
     
-    console.log('Exchanging code for token...',url);
+    console.log('Exchanging code for token...', url);
     const response = await fetch(url);
     const data = await response.json();
 
