@@ -99,40 +99,48 @@ app.get('/auth/callback', async (req, res) => {
 
     if (!appId || !appSecret || !redirectUri) {
       console.error('Missing configuration:', { hasAppId: !!appId, hasAppSecret: !!appSecret, hasRedirectUri: !!redirectUri });
-      return res.status(500).send(`Configuration Error: Please ensure APP_ID, APP_SECRET, and REDIRECT_URI are set.`);
+      return res.status(500).send('Configuration Error: Ensure APP_ID, APP_SECRET, and REDIRECT_URI are set in settings.');
     }
 
-    console.log('Exchanging Instagram code for token...');
+    console.log('Exchanging code for Facebook/Instagram Graph token...');
 
-    // Instagram Basic Display API requires a POST with form-data
-    const params = new URLSearchParams();
-    params.append('client_id', appId);
-    params.append('client_secret', appSecret);
-    params.append('grant_type', 'authorization_code');
-    params.append('redirect_uri', redirectUri);
-    params.append('code', code);
-
-    const response = await fetch('https://api.instagram.com/oauth/access_token', {
-      method: 'POST',
-      body: params
-    });
-
+    // Exchange code for Facebook Graph access token
+    const url = `https://graph.facebook.com/v11.0/oauth/access_token?client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${encodeURIComponent(code)}`;
+    
+    const response = await fetch(url);
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Instagram Token exchange error:', data);
-      return res.status(400).send(`Error getting token: ${data.error_message || data.error?.message || 'Unknown error'}`);
+      console.error('Token exchange error:', data);
+      return res.status(400).send(`Error getting token: ${data.error?.message || 'Unknown error'}`);
     }
 
-    console.log('Instagram Access Token obtained:', data);
-    res.json({
-      message: 'Login success!',
-      user_id: data.user_id,
-      access_token: data.access_token
-    });
+    const accessToken = data.access_token;
+    console.log('Access Token obtained:', accessToken);
+
+    // Now find the connected Instagram Business account
+    const accountsUrl = `https://graph.facebook.com/v11.0/me/accounts?fields=instagram_business_account{id,username}&access_token=${accessToken}`;
+    const accountsResponse = await fetch(accountsUrl);
+    const accountsData = await accountsResponse.json();
+
+    const igAccount = accountsData.data?.find(page => page.instagram_business_account)?.instagram_business_account;
+
+    if (igAccount) {
+      console.log('Successfully found Instagram Account:', igAccount.username, '(ID:', igAccount.id, ')');
+      res.json({
+        message: 'Setup Complete!',
+        instagram_account: igAccount.username,
+        instagram_id: igAccount.id,
+        access_token: accessToken,
+        note: 'You can now use this ID and Token to track mentions and story insights.'
+      });
+    } else {
+      console.warn('No Instagram Business account was found connected to the Pages.');
+      res.send('Login success, but no connected Instagram Business Account was found. Make sure your Instagram is a Professional account and linked to a Facebook Page.');
+    }
   } catch (err) {
-    console.error('Auth callback error:', err);
-    res.status(500).send('Error during authentication process.');
+    console.error('Auth process error:', err);
+    res.status(500).send('Internal server error during authentication.');
   }
 });
 
