@@ -63,9 +63,9 @@ app.get('/auth/callback', async (req, res) => {
     }
 
     // Exchange code for access token
-    const url = `https://graph.facebook.com/v18.0/oauth/access_token?client_id=815875474588666&client_secret=${encodeURIComponent(appSecret)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${encodeURIComponent(code)}`;
+    const url = `https://graph.facebook.com/v18.0/oauth/access_token?client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${encodeURIComponent(code)}`;
     
-    console.log('Exchanging code for token...');
+    console.log('Exchanging code for token...',url);
     const response = await fetch(url);
     const data = await response.json();
 
@@ -126,7 +126,7 @@ app.post('/api/webhook', async (req, res) => {
 module.exports = app;
 
 if (require.main === module) {
-  const port = process.env.PORT || 3003;
+  const port = process.env.PORT || 3004;
   app.listen(port, () => console.log(`Server running on port ${port}`));
 }
 
