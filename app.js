@@ -98,43 +98,38 @@ app.get('/auth/callback', async (req, res) => {
     const redirectUri = (process.env.REDIRECT_URI || '').trim();
 
     if (!appId || !appSecret || !redirectUri) {
-      console.error('Missing Meta App configuration:', { 
-        hasAppId: !!appId, 
-        hasAppSecret: !!appSecret, 
-        hasRedirectUri: !!redirectUri 
-      });
-      return res.status(500).send(`Configuration Error: Please ensure APP_ID, APP_SECRET, and REDIRECT_URI are set in Vercel settings.`);
+      console.error('Missing configuration:', { hasAppId: !!appId, hasAppSecret: !!appSecret, hasRedirectUri: !!redirectUri });
+      return res.status(500).send(`Configuration Error: Please ensure APP_ID, APP_SECRET, and REDIRECT_URI are set.`);
     }
 
-    // Exchange code for access token
-    const url = `https://graph.facebook.com/v11.0/oauth/access_token?client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${encodeURIComponent(code)}`;
-    
-    console.log('Exchanging code for token...', url);
-    const response = await fetch(url);
+    console.log('Exchanging Instagram code for token...');
+
+    // Instagram Basic Display API requires a POST with form-data
+    const params = new URLSearchParams();
+    params.append('client_id', appId);
+    params.append('client_secret', appSecret);
+    params.append('grant_type', 'authorization_code');
+    params.append('redirect_uri', redirectUri);
+    params.append('code', code);
+
+    const response = await fetch('https://api.instagram.com/oauth/access_token', {
+      method: 'POST',
+      body: params
+    });
+
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('Token exchange error:', data);
-      return res.status(400).send(`Error getting token: ${data.error?.message || 'Unknown error'}`);
+      console.error('Instagram Token exchange error:', data);
+      return res.status(400).send(`Error getting token: ${data.error_message || data.error?.message || 'Unknown error'}`);
     }
 
-    console.log('Access Token obtained:', data.access_token);
-    
-    // Now fetch the Instagram Business Account ID connected to the user's accounts
-    const accountsUrl = `https://graph.facebook.com/v11.0/me/accounts?fields=instagram_business_account&access_token=${data.access_token}`;
-    const accountsResponse = await fetch(accountsUrl);
-    const accountsData = await accountsResponse.json();
-    
-    // Find the first page that has a connected Instagram account
-    const igAccount = accountsData.data?.find(page => page.instagram_business_account)?.instagram_business_account;
-    
-    if (igAccount) {
-      console.log('Found Instagram Business Account ID:', igAccount.id);
-      res.send(`Login success! Found Instagram Business Account: ${igAccount.id}. You can now use this ID to track stories.`);
-    } else {
-      console.warn('No connected Instagram Business Account found on the pages.');
-      res.send('Login success, but no Instagram Business Account was found connected to your Facebook Pages. Ensure your Instagram account is a Professional account and linked to a Facebook Page.');
-    }
+    console.log('Instagram Access Token obtained:', data);
+    res.json({
+      message: 'Login success!',
+      user_id: data.user_id,
+      access_token: data.access_token
+    });
   } catch (err) {
     console.error('Auth callback error:', err);
     res.status(500).send('Error during authentication process.');
