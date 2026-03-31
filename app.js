@@ -174,7 +174,8 @@ app.get('/auth/callback', async (req, res) => {
 // Handling the Mention
 app.post('/api/webhook', async (req, res) => {
   const body = req.body;
-
+  console.log("bodysj",body);
+  
   if (body.object === 'instagram') {
     try {
       for (const entry of body.entry) {
