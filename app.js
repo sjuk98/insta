@@ -157,28 +157,32 @@ app.post('/api/webhook', async (req, res) => {
           if (change.field === 'mentions') {
             const mention = change.value;
             
-            // Save share details to Supabase if client is initialized
+            // Log the mention for monitoring
+            console.log('New mention received!', mention);
+            
+            // Save mention details to Supabase shares table
             if (supabase) {
               const { error } = await supabase.from('shares').insert([{
                 instagram_user_id: mention.user_id || entry.id,
                 media_id: mention.media_id,
-                username: mention.username || 'unknown'
+                username: mention.username || 'unknown',
+                processed_at: new Date().toISOString()
               }]);
 
               if (error) {
-                console.error('Error inserting into Supabase:', error);
+                console.error('Error storing share in Supabase:', error);
               } else {
-                console.log('Mention saved to Supabase');
+                console.log(`Success! Tracked mention in Supabase for user: ${mention.username || 'unknown'}`);
               }
             } else {
-              console.warn('Supabase not initialized, skipping insertion');
+              console.warn('Supabase not initialized, mention not saved.');
             }
           }
         }
       }
       return res.status(200).send('OK');
     } catch (err) {
-      console.error('Error processing webhook:', err);
+      console.error('Error processing mention webhook:', err);
       return res.status(500).send('Error');
     }
   }
