@@ -130,6 +130,7 @@ app.get('/auth/callback', async (req, res) => {
     }
 
     console.log('Exchanging Instagram Code for Token...');
+    console.log('Using redirect_uri:', redirectUri);
 
     // This specific code from instagram.com requires a POST request with form-data
     const params = new URLSearchParams();
