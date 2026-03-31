@@ -70,6 +70,33 @@ app.get('/privacy', (req, res) => {
   `);
 });
 
+// Data Deletion Instructions page required by Meta
+app.get('/delete-instructions', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>Data Deletion Instructions - Insta Tracker</title>
+        <style>
+          body { font-family: sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: auto; }
+          h1 { color: #333; }
+        </style>
+      </head>
+      <body>
+        <h1>Data Deletion Instructions</h1>
+        <p>If you would like to delete your activity data for current app, you can do so by following these steps:</p>
+        <ol>
+          <li>Go to your Facebook Profile's "Settings & Privacy" menu. Click "Settings".</li>
+          <li>Look for "Apps and Websites" and you will see all of the apps and websites you have linked with your Facebook account.</li>
+          <li>Search and click "Insta Tracker" in the search bar.</li>
+          <li>Scroll and click "Remove".</li>
+          <li>Congratulations, you have successfully removed your app activities and data.</li>
+        </ol>
+        <p>Alternatively, you can email us at <strong>[Your Contact Email]</strong> to request full data removal from our database.</p>
+      </body>
+    </html>
+  `);
+});
+
 // Verification for Meta Developer Portal
 app.get('/api/webhook', (req, res) => {
   const mode = req.query['hub.mode'];
