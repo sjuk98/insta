@@ -189,6 +189,51 @@ app.post('/api/webhook', async (req, res) => {
   res.sendStatus(404);
 });
 
+// Data Deletion Callback required by Meta
+app.post('/api/deletion', async (req, res) => {
+  const signedRequest = req.body.signed_request;
+
+  if (!signedRequest) {
+    return res.status(400).send('No signed request received');
+  }
+
+  try {
+    const appSecret = (process.env.APP_SECRET || '').trim();
+    if (!appSecret) {
+      console.error('Missing APP_SECRET for deletion callback');
+      return res.status(500).send('Internal server error');
+    }
+
+    // Decode the signed request from Meta
+    const crypto = require('crypto');
+    const [encodedSig, payload] = signedRequest.split('.');
+    const data = JSON.parse(Buffer.from(payload, 'base64').toString());
+
+    // Verify the signature
+    const sig = Buffer.from(encodedSig, 'base64').toString('hex');
+    const expectedSig = crypto.createHmac('sha256', appSecret).update(payload).digest('hex');
+
+    if (sig !== expectedSig) {
+      console.error('Deletion request signature mismatch');
+      return res.status(403).send('Invalid signature');
+    }
+
+    console.log(`Data deletion requested for User ID: ${data.user_id}`);
+    
+    // In a real app, you would delete the user's data from Supabase here
+    // Example: await supabase.from('shares').delete().eq('instagram_user_id', data.user_id);
+
+    // Return the response Meta expects
+    res.json({
+      url: 'https://hookhit.com/privacy', // Confirmation URL
+      confirmation_code: `DEL-${data.user_id}-${Date.now()}` // Tracking ticket ID
+    });
+  } catch (err) {
+    console.error('Error processing deletion callback:', err);
+    res.status(500).send('An error occurred during data deletion.');
+  }
+});
+
 module.exports = app;
 
 if (require.main === module) {
