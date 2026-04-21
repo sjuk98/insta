@@ -174,36 +174,32 @@ app.get('/auth/callback', async (req, res) => {
 // Handling the Mention
 app.post('/api/webhook', async (req, res) => {
   const body = req.body;
-  console.log("bodysj",body);
-  
+  console.log('Incoming Webhook Body:', JSON.stringify(body, null, 2));
+
   if (body.object === 'instagram') {
     try {
       for (const entry of body.entry) {
-        if (!entry.changes) continue;
         
-        for (const change of entry.changes) {
-          if (change.field === 'mentions') {
-            const mention = change.value;
-            
-            // Log the mention for monitoring
-            console.log('New mention received!', mention);
-            
-            // Save mention details to Supabase shares table
-            if (supabase) {
-              const { error } = await supabase.from('shares').insert([{
-                instagram_user_id: mention.user_id || entry.id,
-                media_id: mention.media_id,
-                username: mention.username || 'unknown',
-                processed_at: new Date().toISOString()
-              }]);
+        // 1. Handle standard 'changes' (Direct Mentions)
+        if (entry.changes) {
+          for (const change of entry.changes) {
+            if (change.field === 'mentions') {
+              const mention = change.value;
+              console.log('New Mentions Field received!', mention);
+              await storeMention(mention.user_id || entry.id, mention.media_id, mention.username || 'unknown');
+            }
+          }
+        }
 
-              if (error) {
-                console.error('Error storing share in Supabase:', error);
-              } else {
-                console.log(`Success! Tracked mention in Supabase for user: ${mention.username || 'unknown'}`);
-              }
-            } else {
-              console.warn('Supabase not initialized, mention not saved.');
+        // 2. Handle 'messaging' (Story Mentions sent via DM)
+        if (entry.messaging) {
+          for (const message of entry.messaging) {
+            const senderId = message.sender?.id;
+            const isStoryMention = message.message?.attachments?.some(a => a.type === 'story_mention' || a.type === 'share');
+            
+            if (isStoryMention) {
+              console.log('Story Mention DM Notification received from:', senderId);
+              await storeMention(senderId, 'story_dm_notice', 'dm_user');
             }
           }
         }
@@ -216,6 +212,47 @@ app.post('/api/webhook', async (req, res) => {
   }
   res.sendStatus(404);
 });
+
+async function storeMention(userId, mediaId, username) {
+  if (supabase) {
+    let finalUsername = username;
+    const userToken = (process.env.USER_ACCESS_TOKEN || '').trim();
+
+    // If username is generic (from a DM notification), try to fetch the real Instagram username
+    if ((finalUsername === 'dm_user' || finalUsername === 'unknown') && userToken) {
+      try {
+        console.log(`Looking up real username for ID: ${userId}...`);
+        const userResponse = await fetch(`https://graph.facebook.com/v11.0/${userId}?fields=username&access_token=${userToken}`);
+        const userData = await userResponse.json();
+        
+        if (userData.username) {
+          finalUsername = userData.username;
+          console.log(`Successfully found username: @${finalUsername}`);
+        } else {
+          console.warn('Username lookup failed. Response:', userData);
+        }
+      } catch (err) {
+        console.error('Error during Instagram username lookup:', err);
+      }
+    }
+
+    console.log(`Saving mention for @${finalUsername} (${userId}) to Supabase...`);
+    const { error } = await supabase.from('shares').insert([{
+      instagram_user_id: userId,
+      media_id: mediaId,
+      username: finalUsername,
+      processed_at: new Date().toISOString()
+    }]);
+
+    if (error) {
+      console.error('Error storing share in Supabase:', error);
+    } else {
+      console.log(`Success! Tracked mention in Supabase for user: @${finalUsername}`);
+    }
+  } else {
+    console.warn('Supabase not initialized, mention not saved.');
+  }
+}
 
 // Data Deletion Callback required by Meta
 app.post('/api/deletion', async (req, res) => {
