@@ -225,21 +225,31 @@ async function storeMention(userId, mediaId, username) {
     let finalUsername = username;
     const userToken = (process.env.USER_ACCESS_TOKEN || '').trim();
 
-    // If username is generic (from a DM notification), try to fetch the real Instagram username
-    if ((finalUsername === 'dm_user' || finalUsername === 'unknown') && userToken) {
+    // Try to recover the username if unknown
+    if ((finalUsername === 'dm_user' || finalUsername === 'unknown' || finalUsername === 'dm_userhow') && userToken) {
       try {
-        console.log(`Looking up real username for ID: ${userId}...`);
+        console.log(`Starting advanced lookup for user: ${userId}...`);
+
+        // Method 1: Direct Personal ID lookup
         const userResponse = await fetch(`https://graph.facebook.com/v11.0/${userId}?fields=username&access_token=${userToken}`);
         const userData = await userResponse.json();
         
         if (userData.username) {
           finalUsername = userData.username;
-          console.log(`Successfully found username: @${finalUsername}`);
-        } else {
-          console.warn('Username lookup failed. Response:', userData);
+          console.log(`Method 1 Success: Found @${finalUsername}`);
+        } 
+        // Method 2: Media Owner lookup (works well for story mentions)
+        else if (mediaId && mediaId !== 'story_dm_notice') {
+          console.log(`Method 1 failed, trying Method 2 (Media Owner lookup) for media: ${mediaId}...`);
+          const mediaResponse = await fetch(`https://graph.facebook.com/v11.0/${mediaId}?fields=owner{username}&access_token=${userToken}`);
+          const mediaData = await mediaResponse.json();
+          if (mediaData.owner?.username) {
+            finalUsername = mediaData.owner.username;
+            console.log(`Method 2 Success: Found @${finalUsername}`);
+          }
         }
       } catch (err) {
-        console.error('Error during Instagram username lookup:', err);
+        console.error('Advanced lookup error:', err);
       }
     }
 
