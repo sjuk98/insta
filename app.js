@@ -191,15 +191,22 @@ app.post('/api/webhook', async (req, res) => {
           }
         }
 
-        // 2. Handle 'messaging' (Story Mentions sent via DM)
+        // 2. Handle 'messaging' (Story Mentions and DMs)
         if (entry.messaging) {
           for (const message of entry.messaging) {
             const senderId = message.sender?.id;
+            
+            // Story mentions can appear in standard 'message' or 'message_edit'
+            const hasMessage = !!message.message;
+            const hasEdit = !!message.message_edit;
+            
+            // Check for story mention attachments in standard messages
             const isStoryMention = message.message?.attachments?.some(a => a.type === 'story_mention' || a.type === 'share');
             
-            if (isStoryMention) {
-              console.log('Story Mention DM Notification received from:', senderId);
-              await storeMention(senderId, 'story_dm_notice', 'dm_user');
+            // If it's a known story mention OR a message/edit event from a user, we track it
+            if (isStoryMention || hasEdit || hasMessage) {
+              console.log(`Detected mention or interaction via messaging from: ${senderId}`);
+              await storeMention(senderId, 'story_messaging_event', 'dm_user');
             }
           }
         }
