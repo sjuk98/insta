@@ -1,9 +1,11 @@
 const express = require('express');
+const path = require('path');
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const app = express();
 
 app.use(express.json());
+app.use(express.static('public'));
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
@@ -22,8 +24,26 @@ const supabase = (SUPABASE_URL && SUPABASE_SERVICE_KEY)
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY) 
   : null;
 
+// API for Dashboard
+app.get('/api/mentions', async (req, res) => {
+  if (!supabase) return res.status(500).json({ error: 'Supabase not connected' });
+  
+  const { data, error } = await supabase
+    .from('shares')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(50);
+    
+  if (error) return res.status(500).json(error);
+  res.json(data);
+});
+
 app.get('/', (req, res) => {
-  res.send('hello');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // Privacy Policy page required by Meta

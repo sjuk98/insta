@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | HookHit Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF3B6B;
+            --bg: #0A0A0C;
+            --card: #16161A;
+            --text: #F0F0F3;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 40px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto 60px auto;
+        }
+
+        h1 {
+            font-weight: 600;
+            font-size: 2rem;
+            margin: 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto 40px auto;
+        }
+
+        .stat-card {
+            background: var(--card);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            opacity: 0.5;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .table-container {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 15px;
+            opacity: 0.4;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        td {
+            padding: 20px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+            font-size: 0.95rem;
+        }
+
+        .username {
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .badge {
+            background: rgba(255, 59, 107, 0.1);
+            color: var(--primary);
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .btn-back {
+            color: white;
+            text-decoration: none;
+            opacity: 0.5;
+            font-size: 0.9rem;
+            transition: opacity 0.3s;
+        }
+
+        .btn-back:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <a href="/" class="btn-back">← Back to Home</a>
+        <h1>Engagement Dashboard</h1>
+        <div style="width: 100px;"></div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div id="total-mentions" class="stat-value">-</div>
+            <div class="stat-label">Total Mentions Captured</div>
+        </div>
+        <div class="stat-card">
+            <div id="unique-users" class="stat-value">-</div>
+            <div class="stat-label">Unique Influencers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">Active</div>
+            <div class="stat-label">Webhook Monitoring Status</div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Influencer</th>
+                    <th>Platform ID</th>
+                    <th>Status</th>
+                    <th>Detected At</th>
+                </tr>
+            </thead>
+            <tbody id="mentions-body">
+                <!-- Data will load here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function loadData() {
+            try {
+                const response = await fetch('/api/mentions');
+                const data = await response.json();
+
+                const tableBody = document.getElementById('mentions-body');
+                const totalMentions = document.getElementById('total-mentions');
+                const uniqueUsers = document.getElementById('unique-users');
+
+                totalMentions.innerText = data.length;
+
+                const uniqueSet = new Set(data.map(m => m.instagram_user_id));
+                uniqueUsers.innerText = uniqueSet.size;
+
+                tableBody.innerHTML = '';
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    const date = new Date(item.processed_at || item.created_at).toLocaleString();
+                    row.innerHTML = `
+                        <td class="username">@${item.username || 'dm_user'}</td>
+                        <td style="opacity: 0.5;">${item.instagram_user_id}</td>
+                        <td><span class="badge">Tracked</span></td>
+                        <td>${date}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (err) {
+                console.error('Failed to load mentions:', err);
+            }
+        }
+
+        loadData();
+        setInterval(loadData, 5000); // Auto-refresh every 5 seconds
+    </script>
+</body>
+
+</html>
